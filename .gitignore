@@ -1,0 +1,74 @@
+# Build artifacts
+build/
+build_ext_libs/
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+*.exp
+*.pdb
+*.ilk
+*.exe
+
+# Configuration
+.buildconfig.json
+
+# IDE - VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/c_cpp_properties.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+
+# IDE - Others
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+*.pyc
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Godot
+.import/
+*.translation
+.godot/
+export_presets.cfg
+*.import
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# Compiled Python
+*.pyc
+
+# SCons
+.sconsign.dblite
+.sconf_temp/
+config.log
+
+# Generated files
+compile_commands.json

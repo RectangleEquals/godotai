@@ -31,7 +31,7 @@ class BuildConfig:
         """
         self.root_dir = root_dir
         self.config_path = root_dir / self.CONFIG_FILE
-        self._config: Optional[Dict[str, Any]] = None
+        self._config: Dict[str, Any] = {}
     
     def load(self) -> Dict[str, Any]:
         """
@@ -40,7 +40,7 @@ class BuildConfig:
         Returns:
             Configuration dictionary (or defaults if file doesn't exist)
         """
-        if self._config is not None:
+        if self._config:
             return self._config
         
         if self.config_path.exists():
@@ -97,4 +97,4 @@ class BuildConfig:
         """Delete configuration file."""
         if self.config_path.exists():
             self.config_path.unlink()
-        self._config = None
+        self._config = {}

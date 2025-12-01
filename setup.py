@@ -75,11 +75,18 @@ def prompt_for_arguments(tool) -> Dict[str, Any]:
         if arg.description:
             print(f"  {arg.description}")
         
+        # Handle choices display - filter out empty strings
         if arg.choices:
-            print(f"  Choices: {', '.join(map(str, arg.choices))}")
+            display_choices = [c for c in arg.choices if c != ""]
+            if display_choices:
+                print(f"  Choices: {', '.join(map(str, display_choices))}")
         
+        # Show default, handling empty string specially
         if arg.default is not None:
-            prompt += f" [default: {arg.default}]"
+            if arg.default == "":
+                prompt += f" [default: <use config>]"
+            else:
+                prompt += f" [default: {arg.default}]"
         
         if arg.required:
             prompt += " (required)"

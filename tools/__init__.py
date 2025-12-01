@@ -23,8 +23,6 @@ def discover_tools() -> List[BaseTool]:
     Returns:
         List of instantiated tool objects, sorted by name
     """
-    # Avoid circular import
-    from tools.base_tool import BaseTool
     
     tools = []
     tools_dir = Path(__file__).parent

@@ -116,6 +116,7 @@ class BuildLibgit2Tool(BaseTool):
             "-DUSE_SSH=OFF",            # No SSH support needed
             "-DUSE_HTTPS=OFF",          # No HTTPS needed for local repos
             "-DBUILD_TESTS=OFF",        # Don't build tests
+            "-DBUILD_CLI=OFF",          # Don't build CLI tool (causes zlib errors)
             "-DTHREADSAFE=ON",          # Thread-safe operations
         ]
         

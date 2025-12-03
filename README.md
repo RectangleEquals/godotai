@@ -14,7 +14,7 @@ AI-powered Godot project management via Claude Desktop and Model Context Protoco
 
 - Godot 4.4.1 or later
 - Python 3.8 or later
-- CMake 3.15 or later (for building dependencies)
+- CMake 3.13 or later (for building dependencies)
 - C++17 compatible compiler
 - Git
 

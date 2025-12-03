@@ -1,0 +1,241 @@
+name: Build GodotAI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows
+          - platform: windows
+            os: windows-latest
+            arch: x86_64
+            
+          # Linux
+          - platform: linux
+            os: ubuntu-latest
+            arch: x86_64
+          
+          # macOS Universal
+          - platform: macos
+            os: macos-latest
+            arch: universal
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.22.x'
+      
+      - name: Set up MSVC (Windows)
+        if: matrix.platform == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      
+      - name: Install dependencies (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config
+      
+      - name: Install dependencies (macOS)
+        if: matrix.platform == 'macos'
+        run: |
+          brew install cmake
+      
+      - name: Initialize project
+        run: |
+          python setup.py <<EOF
+          init
+          4.4
+          
+          
+          
+          n
+          EOF
+        shell: bash
+      
+      - name: Build dependencies
+        run: |
+          python setup.py <<EOF
+          build-libgit2
+          Release
+          n
+          EOF
+          python setup.py <<EOF
+          build-libhv
+          Release
+          n
+          EOF
+        shell: bash
+      
+      - name: Build plugin
+        run: |
+          python setup.py <<EOF
+          build-plugin
+          
+          editor
+          ${{ matrix.arch }}
+          single
+          0
+          n
+          y
+          EOF
+        shell: bash
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdai-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            plugin/bin/${{ matrix.platform }}/
+          retention-days: 7
+  
+  package:
+    name: Package Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      
+      - name: Organize plugin structure
+        run: |
+          mkdir -p release/addons/gdai/bin
+          
+          # Copy libraries
+          cp -r artifacts/gdai-windows-x86_64/* release/addons/gdai/bin/
+          cp -r artifacts/gdai-linux-x86_64/* release/addons/gdai/bin/
+          cp -r artifacts/gdai-macos-universal/* release/addons/gdai/bin/
+          
+          # Copy plugin files
+          cp plugin/plugin.cfg release/addons/gdai/
+          cp plugin/plugin.gd release/addons/gdai/
+          
+          # Copy plugin scripts if they exist
+          if [ -d "plugin/plugin" ]; then
+            cp -r plugin/plugin release/addons/gdai/
+          fi
+      
+      - name: Generate multi-platform gdextension
+        run: |
+          python -c "
+          from pathlib import Path
+          
+          content = '''[configuration]
+          entry_symbol = \"gdai_library_init\"
+          compatibility_minimum = \"4.4\"
+          reloadable = true
+          
+          [libraries]
+          # Windows
+          windows.editor.x86_64 = \"res://addons/gdai/bin/windows/libgdai.windows.editor.x86_64.dll\"
+          
+          # Linux
+          linux.editor.x86_64 = \"res://addons/gdai/bin/linux/libgdai.linux.editor.x86_64.so\"
+          
+          # macOS
+          macos.editor = \"res://addons/gdai/bin/macos/libgdai.macos.editor.universal.dylib\"
+          '''
+          
+          Path('release/addons/gdai/gdai.gdextension').write_text(content.strip())
+          print('Generated gdai.gdextension')
+          "
+      
+      - name: Create README
+        run: |
+          cat > release/addons/gdai/README.md << 'EOF'
+          # GodotAI - AI-Powered Editor Plugin
+          
+          AI-powered project management for Godot via Claude Desktop and MCP.
+          
+          ## Installation
+          
+          1. Copy the `gdai` folder to your Godot project's `addons/` directory
+          2. Restart Godot or reload the project
+          3. Enable the plugin in Project → Project Settings → Plugins
+          
+          ## Requirements
+          
+          - Godot 4.4 or higher
+          - One of the supported platforms:
+            - Windows x86_64
+            - Linux x86_64
+            - macOS Universal (x86_64 + ARM64)
+          
+          ## Documentation
+          
+          For full documentation, visit: https://github.com/RectangleEquals/godotai
+          
+          ## License
+          
+          MIT License - See LICENSE file for details
+          EOF
+      
+      - name: Create archive
+        run: |
+          cd release
+          zip -r ../godotai-${{ github.ref_name }}.zip addons/
+          cd ..
+          
+          # Create checksums
+          sha256sum godotai-${{ github.ref_name }}.zip > checksums.txt
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            godotai-${{ github.ref_name }}.zip
+            checksums.txt
+          body: |
+            ## GodotAI ${{ github.ref_name }}
+            
+            ### Installation
+            
+            1. Download `godotai-${{ github.ref_name }}.zip`
+            2. Extract to your Godot project's `addons/` directory
+            3. Enable in Project → Project Settings → Plugins
+            
+            ### Supported Platforms
+            
+            - ✅ Windows x86_64
+            - ✅ Linux x86_64
+            - ✅ macOS Universal (Intel + Apple Silicon)
+            
+            ### Checksums
+            
+            See `checksums.txt` for SHA256 verification.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

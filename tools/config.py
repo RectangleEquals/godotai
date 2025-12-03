@@ -17,7 +17,7 @@ class BuildConfig:
     DEFAULT_CONFIG = {
         "godot_version": "4.4",
         "platform": "windows",
-        "config": "release",
+        "target": "editor",  # Editor-only plugin
         "architecture": "x86_64",
         "jobs": 4,
     }
@@ -46,6 +46,18 @@ class BuildConfig:
         if self.config_path.exists():
             with open(self.config_path, 'r') as f:
                 self._config = json.load(f)
+                
+                # Migrate old config values
+                if "config" in self._config:
+                    # Old key, migrate to target
+                    old_config = self._config.pop("config")
+                    if old_config == "debug":
+                        self._config["target"] = "editor"  # Debug builds are for editor
+                    elif old_config == "release":
+                        self._config["target"] = "editor"  # Still editor, just different optimization
+                
+                # Ensure target is always editor
+                self._config["target"] = "editor"
         else:
             self._config = self.DEFAULT_CONFIG.copy()
         
@@ -58,6 +70,9 @@ class BuildConfig:
         Args:
             config: Configuration to save
         """
+        # Ensure target is always editor
+        config["target"] = "editor"
+        
         with open(self.config_path, 'w') as f:
             json.dump(config, f, indent=2)
         
@@ -87,6 +102,11 @@ class BuildConfig:
         """
         config = self.load()
         config[key] = value
+        
+        # Ensure target is always editor
+        if key == "target" or "target" not in config:
+            config["target"] = "editor"
+        
         self.save(config)
     
     def exists(self) -> bool:

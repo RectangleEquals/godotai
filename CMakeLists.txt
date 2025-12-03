@@ -23,10 +23,9 @@ endif()
 # Build Options
 # ============================================================================
 
-set(GODOTAI_BUILD_TYPE "template_release" CACHE STRING
-    "Build type: template_debug, template_release, or editor")
-set_property(CACHE GODOTAI_BUILD_TYPE PROPERTY STRINGS
-    "template_debug;template_release;editor")
+set(GODOTAI_BUILD_TYPE "editor" CACHE STRING
+    "Build type: editor (this is an editor-only plugin)")
+set_property(CACHE GODOTAI_BUILD_TYPE PROPERTY STRINGS "editor")
 
 set(GODOTAI_PRECISION "single" CACHE STRING
     "Floating-point precision: single or double")

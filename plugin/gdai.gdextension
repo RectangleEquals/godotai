@@ -1,11 +1,11 @@
 [configuration]
 entry_symbol = "gdai_library_init"
 compatibility_minimum = "4.4"
+reloadable = true
 
 [libraries]
-windows.debug.x86_64 = "res://addons/gdai/bin/windows/libgodotai.windows.template_debug.x86_64.dll"
-windows.release.x86_64 = "res://addons/gdai/bin/windows/libgodotai.windows.template_release.x86_64.dll"
-linux.debug.x86_64 = "res://addons/gdai/bin/linux/libgodotai.linux.template_debug.x86_64.so"
-linux.release.x86_64 = "res://addons/gdai/bin/linux/libgodotai.linux.template_release.x86_64.so"
-macos.debug = "res://addons/gdai/bin/macos/libgodotai.macos.template_debug.universal.dylib"
-macos.release = "res://addons/gdai/bin/macos/libgodotai.macos.template_release.universal.dylib"
+# This file is auto-generated during build
+# Run: python setup.py -> build
+# The build system will scan plugin/bin/ and generate entries for found libraries
+#
+# DO NOT EDIT MANUALLY - Your changes will be overwritten

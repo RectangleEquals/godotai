@@ -46,11 +46,11 @@ class BuildPluginTool(BaseTool):
             ),
             ToolArgument(
                 name="target",
-                description="Build target (empty = use config)",
+                description="Build target (editor only for this plugin)",
                 type=str,
                 required=False,
                 default="",
-                choices=["", "template_debug", "template_release", "editor"]
+                choices=["", "editor"]
             ),
             ToolArgument(
                 name="architecture",
@@ -106,20 +106,15 @@ class BuildPluginTool(BaseTool):
         
         # Get build parameters (command-line overrides config)
         platform = args.get("platform") or self._auto_detect_platform()
-        target = args.get("target") or config.get("target", "template_release")
+        target = args.get("target") or config.get("target", "editor")
         architecture = args.get("architecture") or config.get("architecture", "x86_64")
         precision = args.get("precision") or config.get("precision", "single")
         jobs = args.get("jobs") or config.get("jobs", 0)
         should_clean = args.get("clean", False)
         should_install = args.get("install", True)
         
-        # Convert old "config" key to new "target" format
-        old_config = config.get("config")
-        if old_config and not target:
-            if old_config == "debug":
-                target = "template_debug"
-            elif old_config == "release":
-                target = "template_release"
+        # Force editor target (this is an editor-only plugin)
+        target = "editor"
         
         print("\n" + "=" * 70)
         print("Building GodotAI Extension with CMake")
@@ -161,6 +156,13 @@ class BuildPluginTool(BaseTool):
         if should_install:
             if not self._cmake_install(build_dir):
                 return 1
+        
+        # Step 4: Generate gdai.gdextension file
+        print("\n📝 Generating gdai.gdextension...")
+        result = self.execute_tool("generate-gdextension", {})
+        if result != 0:
+            self.print_warning("Failed to generate gdextension file")
+            print("You may need to create it manually or reinstall")
         
         # Show summary
         self._show_build_summary(root_dir, build_dir, target, platform, should_install)

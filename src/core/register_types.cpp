@@ -6,6 +6,7 @@
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
 
 using namespace godot;
 
@@ -18,9 +19,7 @@ void initialize_gdai_module(ModuleInitializationLevel p_level) {
     // Example: ClassDB::register_class<GDAIPlugin>();
     
     // For now, just log that we've initialized
-    if (Engine::get_singleton()) {
-        Engine::get_singleton()->print_to_console("GDAI: Module initialized (minimal stub)");
-    }
+    UtilityFunctions::print("GDAI: Module initialized (minimal stub)");
 }
 
 void uninitialize_gdai_module(ModuleInitializationLevel p_level) {

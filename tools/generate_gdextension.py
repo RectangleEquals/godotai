@@ -1,255 +1,232 @@
 """
-Generate gdextension file dynamically.
+GDExtension File Generator
 
-Scans plugin/bin/ directory for built libraries and generates the
-gdai.gdextension file with only the entries for libraries that exist.
+Generates the .gdextension file with proper platform configurations.
+Can be used standalone or as part of the build pipeline.
 """
 
+import argparse
+import sys
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
-
-from tools.base_tool import BaseTool
+from typing import Dict, List, Optional
 
 
-class GenerateGDExtensionTool(BaseTool):
-    """Generate gdai.gdextension file based on built libraries."""
+def detect_platform() -> str:
+    """Detect the current platform."""
+    import platform
+    system = platform.system().lower()
     
-    @property
-    def name(self) -> str:
-        return "generate-gdextension"
+    if system == "windows":
+        return "windows"
+    elif system == "darwin":
+        return "macos"
+    elif system == "linux":
+        return "linux"
+    else:
+        raise ValueError(f"Unsupported platform: {system}")
+
+
+def get_library_extension(platform: str) -> str:
+    """Get the library file extension for a platform."""
+    extensions = {
+        "windows": "dll",
+        "linux": "so",
+        "macos": "dylib"
+    }
+    return extensions.get(platform, "so")
+
+
+def get_library_prefix(platform: str) -> str:
+    """Get the library file prefix for a platform."""
+    if platform == "windows":
+        return ""
+    return "lib"
+
+
+def generate_library_path(platform: str, target: str, arch: str) -> str:
+    """
+    Generate the library path for a specific platform/target/arch.
     
-    @property
-    def description(self) -> str:
-        return "Generate gdai.gdextension file from built libraries"
+    Args:
+        platform: Platform name (windows, linux, macos)
+        target: Target name (editor, template_debug, template_release)
+        arch: Architecture (x86_64, arm64, universal, etc.)
+        
+    Returns:
+        Library path string
+    """
+    prefix = get_library_prefix(platform)
+    ext = get_library_extension(platform)
     
-    @property
-    def category(self) -> str:
-        return "build"
+    # Build the filename
+    parts = [prefix + "gdai", platform, target]
     
-    @property
-    def visible(self) -> bool:
-        return False  # Called by build-plugin automatically
+    # Add arch if not universal or if platform is not macOS
+    if arch != "universal" or platform != "macos":
+        parts.append(arch)
     
-    def execute(self, args: Dict[str, Any]) -> int:
-        """Execute the generate-gdextension tool."""
-        root_dir = self.get_root_dir()
-        plugin_dir = root_dir / "plugin"
-        bin_dir = plugin_dir / "bin"
+    filename = ".".join(parts) + f".{ext}"
+    
+    return f"res://addons/gdai/bin/{platform}/{filename}"
+
+
+def generate_gdextension_content(
+    platforms: Optional[List[str]] = None,
+    targets: Optional[List[str]] = None,
+    architectures: Optional[Dict[str, List[str]]] = None,
+    godot_version: str = "4.4",
+    entry_symbol: str = "gdai_library_init"
+) -> str:
+    """
+    Generate the content of a .gdextension file.
+    
+    Args:
+        platforms: List of platforms to include (None = all)
+        targets: List of targets to include (None = editor only)
+        architectures: Dict of platform -> list of architectures
+        godot_version: Minimum Godot version
+        entry_symbol: Entry point symbol name
         
-        print("\n" + "=" * 70)
-        print("Generating gdai.gdextension")
-        print("=" * 70)
+    Returns:
+        Complete .gdextension file content
+    """
+    
+    # Default values
+    if platforms is None:
+        platforms = ["windows", "linux", "macos"]
+    
+    if targets is None:
+        targets = ["editor"]
+    
+    if architectures is None:
+        architectures = {
+            "windows": ["x86_64"],
+            "linux": ["x86_64"],
+            "macos": ["universal"]
+        }
+    
+    # Start building content
+    lines = [
+        "[configuration]",
+        f'entry_symbol = "{entry_symbol}"',
+        f'compatibility_minimum = "{godot_version}"',
+        "reloadable = true",
+        "",
+        "[libraries]"
+    ]
+    
+    # Generate library entries for each platform/target/arch combination
+    for platform in platforms:
+        lines.append(f"# {platform.title()}")
         
-        # Scan for built libraries
-        libraries = self._scan_libraries(bin_dir)
+        for target in targets:
+            for arch in architectures.get(platform, ["x86_64"]):
+                lib_path = generate_library_path(platform, target, arch)
+                
+                # Generate the key
+                key_parts = [platform, target]
+                if arch != "universal" or platform != "macos":
+                    key_parts.append(arch)
+                key = ".".join(key_parts)
+                
+                lines.append(f'{key} = "{lib_path}"')
         
-        if not libraries:
-            self.print_warning("No libraries found in plugin/bin/")
-            print("\nExpected structure:")
-            print("  plugin/bin/<platform>/libgdai.<platform>.editor.<arch>.<ext>")
-            return 1
-        
-        # Generate the gdextension file
-        gdextension_path = plugin_dir / "gdai.gdextension"
-        if not self._generate_file(gdextension_path, libraries):
-            return 1
-        
-        # Show summary
-        print("\n📄 Generated gdai.gdextension with entries for:")
-        for platform, arch, _ in libraries:
-            print(f"  - {platform}.editor.{arch}")
-        
-        print(f"\n✓ Saved to: {gdextension_path}")
-        
+        lines.append("")  # Blank line between platforms
+    
+    return "\n".join(lines)
+
+
+def write_gdextension_file(output_path: Path, content: str) -> None:
+    """Write the gdextension content to a file."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(content)
+    print(f"✅ Generated: {output_path}")
+
+
+def main():
+    """CLI entry point for standalone usage."""
+    parser = argparse.ArgumentParser(
+        description="Generate .gdextension file for GodotAI",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    
+    parser.add_argument(
+        "--output", "-o",
+        type=Path,
+        default=Path("plugin/gdai.gdextension"),
+        help="Output file path (default: plugin/gdai.gdextension)"
+    )
+    
+    parser.add_argument(
+        "--platform", "-p",
+        choices=["windows", "linux", "macos"],
+        help="Generate for specific platform only"
+    )
+    
+    parser.add_argument(
+        "--all-platforms",
+        action="store_true",
+        help="Generate for all platforms (default)"
+    )
+    
+    parser.add_argument(
+        "--target", "-t",
+        choices=["editor", "template_debug", "template_release"],
+        action="append",
+        help="Target(s) to include (can be specified multiple times)"
+    )
+    
+    parser.add_argument(
+        "--godot-version",
+        default="4.4",
+        help="Minimum Godot version (default: 4.4)"
+    )
+    
+    parser.add_argument(
+        "--entry-symbol",
+        default="gdai_library_init",
+        help="Entry point symbol (default: gdai_library_init)"
+    )
+    
+    args = parser.parse_args()
+    
+    # Determine platforms
+    if args.platform:
+        platforms = [args.platform]
+    else:
+        platforms = ["windows", "linux", "macos"]
+    
+    # Determine targets
+    targets = args.target if args.target else ["editor"]
+    
+    # Standard architectures
+    architectures = {
+        "windows": ["x86_64"],
+        "linux": ["x86_64"],
+        "macos": ["universal"]
+    }
+    
+    # Generate content
+    content = generate_gdextension_content(
+        platforms=platforms,
+        targets=targets,
+        architectures=architectures,
+        godot_version=args.godot_version,
+        entry_symbol=args.entry_symbol
+    )
+    
+    # Write file
+    try:
+        write_gdextension_file(args.output, content)
+        print(f"\n📄 Generated .gdextension file with:")
+        print(f"   Platforms: {', '.join(platforms)}")
+        print(f"   Targets: {', '.join(targets)}")
+        print(f"   Godot: {args.godot_version}+")
         return 0
-    
-    def _scan_libraries(self, bin_dir: Path) -> List[Tuple[str, str, Path]]:
-        """
-        Scan bin directory for libraries.
-        
-        Args:
-            bin_dir: plugin/bin directory
-            
-        Returns:
-            List of (platform, architecture, filepath) tuples
-        """
-        libraries = []
-        
-        if not bin_dir.exists():
-            return libraries
-        
-        # Platform-specific library patterns
-        platform_patterns = {
-            "windows": {"ext": ".dll", "prefix": "lib"},
-            "linux": {"ext": ".so", "prefix": "lib"},
-            "macos": {"ext": ".dylib", "prefix": "lib"},
-        }
-        
-        # Scan platform directories
-        for platform_dir in bin_dir.iterdir():
-            if not platform_dir.is_dir():
-                continue
-            
-            platform = platform_dir.name
-            
-            if platform not in platform_patterns:
-                print(f"⚠️  Unknown platform directory: {platform}")
-                continue
-            
-            pattern = platform_patterns[platform]
-            
-            # Find libraries in this platform directory
-            for lib_file in platform_dir.glob(f"{pattern['prefix']}gdai.*{pattern['ext']}"):
-                # Parse library filename to extract architecture
-                # Expected format: libgdai.<platform>.editor.<arch>.<ext>
-                # Example: libgdai.windows.editor.x86_64.dll
-                
-                parts = lib_file.stem.split(".")
-                # parts = ['libgdai', 'windows', 'editor', 'x86_64']
-                
-                if len(parts) >= 4 and parts[2] == "editor":
-                    arch = parts[3]
-                    libraries.append((platform, arch, lib_file))
-                else:
-                    print(f"⚠️  Unexpected library name format: {lib_file.name}")
-        
-        return sorted(libraries)
-    
-    def _generate_file(self, output_path: Path, libraries: List[Tuple[str, str, Path]]) -> bool:
-        """
-        Generate the gdextension file.
-        
-        Args:
-            output_path: Path to gdai.gdextension
-            libraries: List of (platform, arch, filepath) tuples
-            
-        Returns:
-            True if successful
-        """
-        try:
-            content = [
-                "[configuration]",
-                'entry_symbol = "gdai_library_init"',
-                'compatibility_minimum = "4.4"',
-                'reloadable = true',
-                "",
-                "[libraries]",
-                "# Auto-generated by generate-gdextension tool",
-                "# DO NOT EDIT MANUALLY - this file is regenerated during build",
-                ""
-            ]
-            
-            # Group by platform
-            by_platform = {}
-            for platform, arch, filepath in libraries:
-                if platform not in by_platform:
-                    by_platform[platform] = []
-                by_platform[platform].append((arch, filepath))
-            
-            # Generate entries for each platform
-            for platform in sorted(by_platform.keys()):
-                content.append(f"# {platform.capitalize()}")
-                
-                for arch, filepath in sorted(by_platform[platform]):
-                    # Generate the path relative to res://addons/gdai/
-                    # filepath is absolute, convert to relative from plugin/
-                    rel_path = filepath.relative_to(output_path.parent)
-                    godot_path = f"res://addons/gdai/{rel_path.as_posix()}"
-                    
-                    # Determine the key
-                    if platform == "macos" and arch == "universal":
-                        key = f"{platform}.editor"
-                    else:
-                        key = f"{platform}.editor.{arch}"
-                    
-                    content.append(f'{key} = "{godot_path}"')
-                
-                content.append("")
-            
-            # Write the file
-            output_path.write_text("\n".join(content), encoding="utf-8")
-            
-            return True
-            
-        except Exception as e:
-            self.print_error(f"Failed to generate gdextension file: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
-    
-    def generate_for_ci(self, platforms: List[str] = None) -> int:
-        """
-        Generate gdextension file for CI builds.
-        
-        This variant includes entries for all specified platforms,
-        even if the libraries don't exist locally yet.
-        
-        Args:
-            platforms: List of platforms to include (None = all)
-            
-        Returns:
-            Exit code
-        """
-        root_dir = self.get_root_dir()
-        plugin_dir = root_dir / "plugin"
-        gdextension_path = plugin_dir / "gdai.gdextension"
-        
-        if platforms is None:
-            platforms = ["windows", "linux", "macos"]
-        
-        print(f"\n📄 Generating CI gdextension template for: {', '.join(platforms)}")
-        
-        content = [
-            "[configuration]",
-            'entry_symbol = "gdai_library_init"',
-            'compatibility_minimum = "4.4"',
-            'reloadable = true',
-            "",
-            "[libraries]",
-            "# Auto-generated for CI builds",
-            "# This includes all platforms that will be built by GitHub Actions",
-            ""
-        ]
-        
-        # Platform-specific architectures
-        platform_archs = {
-            "windows": ["x86_64", "x86_32", "arm64"],
-            "linux": ["x86_64", "x86_32", "arm64", "rv64"],
-            "macos": ["universal", "x86_64", "arm64"]
-        }
-        
-        for platform in platforms:
-            content.append(f"# {platform.capitalize()}")
-            
-            archs = platform_archs.get(platform, ["x86_64"])
-            
-            for arch in archs:
-                # Determine extension
-                if platform == "windows":
-                    ext = "dll"
-                elif platform == "linux":
-                    ext = "so"
-                else:
-                    ext = "dylib"
-                
-                # Generate path
-                lib_name = f"libgdai.{platform}.editor.{arch}.{ext}"
-                godot_path = f"res://addons/gdai/bin/{platform}/{lib_name}"
-                
-                # Determine key
-                if platform == "macos" and arch == "universal":
-                    key = f"{platform}.editor"
-                else:
-                    key = f"{platform}.editor.{arch}"
-                
-                content.append(f'{key} = "{godot_path}"')
-            
-            content.append("")
-        
-        try:
-            gdextension_path.write_text("\n".join(content), encoding="utf-8")
-            print(f"✓ Generated: {gdextension_path}")
-            return 0
-        except Exception as e:
-            self.print_error(f"Failed to generate CI template: {e}")
-            return 1
+    except Exception as e:
+        print(f"❌ Error: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

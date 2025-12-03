@@ -15,6 +15,8 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from pathlib import Path
 import json
+import os
+import sys
 
 
 @dataclass
@@ -152,6 +154,19 @@ class BaseTool(ABC):
         
         return True, ""
     
+    def is_ci_environment(self) -> bool:
+        """
+        Check if running in a CI environment.
+        
+        Returns:
+            True if running in CI, False otherwise
+        """
+        return (
+            os.getenv('CI') == 'true' or 
+            os.getenv('GODOTAI_NON_INTERACTIVE') == '1' or
+            not sys.stdin.isatty()
+        )
+    
     def get_root_dir(self) -> Path:
         """
         Get the repository root directory.
@@ -197,7 +212,7 @@ class BaseTool(ABC):
         all_tools = discover_tools(include_hidden=True)
         return [tool for tool in all_tools if tool.category == category]
     
-    def execute_tool(self, tool_name: str, args: Dict[str, Any] = None) -> int:
+    def execute_tool(self, tool_name: str, args: Optional[Dict[str, Any]] = None) -> int:
         """
         Execute another tool by name.
         
@@ -214,11 +229,35 @@ class BaseTool(ABC):
             args = {}
         
         try:
-            tool = get_tool_by_name(tool_name)
+            tool = get_tool_by_name(tool_name, include_hidden=True)
             return tool.execute(args)
         except ValueError as e:
             self.print_error(str(e))
             return 1
+    
+    def confirm(self, message: str, default: bool = False) -> bool:
+        """
+        Ask user for confirmation (skips in CI).
+        
+        Args:
+            message: Confirmation message
+            default: Default value in CI or when no input
+            
+        Returns:
+            True if confirmed, False otherwise
+        """
+        # In CI, use default
+        if self.is_ci_environment():
+            return default
+        
+        # Interactive prompt
+        suffix = " [Y/n]: " if default else " [y/N]: "
+        response = input(message + suffix).strip().lower()
+        
+        if not response:
+            return default
+        
+        return response in ['y', 'yes']
     
     def print_error(self, message: str):
         """Print an error message."""

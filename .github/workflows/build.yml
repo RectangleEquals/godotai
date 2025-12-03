@@ -9,9 +9,12 @@ on:
     branches: [ main, master, develop ]
   workflow_dispatch:
 
+env:
+  GODOT_VERSION: "4.4"
+
 jobs:
   build:
-    name: Build ${{ matrix.platform }}
+    name: Build ${{ matrix.platform }} (${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,7 +30,7 @@ jobs:
             os: ubuntu-latest
             arch: x86_64
           
-          # macOS Universal
+          # macOS Universal (Intel + Apple Silicon)
           - platform: macos
             os: macos-latest
             arch: universal
@@ -56,66 +59,51 @@ jobs:
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config
+          sudo apt-get install -y build-essential pkg-config libssl-dev
       
       - name: Install dependencies (macOS)
         if: matrix.platform == 'macos'
         run: |
           brew install cmake
       
-      - name: Initialize project
+      - name: Build GodotAI
+        env:
+          CI: true
         run: |
-          python setup.py <<EOF
-          init
-          4.4
-          
-          
-          
-          n
-          EOF
-        shell: bash
+          python setup.py ci-build --non-interactive --args '{
+            "godot_version": "${{ env.GODOT_VERSION }}",
+            "arch": "${{ matrix.arch }}",
+            "target": "editor",
+            "build_type": "Release",
+            "precision": "single",
+            "verbose": false
+          }'
       
-      - name: Build dependencies
-        run: |
-          python setup.py <<EOF
-          build-libgit2
-          Release
-          n
-          EOF
-          python setup.py <<EOF
-          build-libhv
-          Release
-          n
-          EOF
+      - name: Verify build output
         shell: bash
-      
-      - name: Build plugin
         run: |
-          python setup.py <<EOF
-          build-plugin
-          
-          editor
-          ${{ matrix.arch }}
-          single
-          0
-          n
-          y
-          EOF
-        shell: bash
+          echo "Checking for build artifacts..."
+          if [ -d "plugin/bin/${{ matrix.platform }}" ]; then
+            echo "✅ Build artifacts found:"
+            ls -la plugin/bin/${{ matrix.platform }}/
+          else
+            echo "❌ Build artifacts not found!"
+            exit 1
+          fi
       
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: gdai-${{ matrix.platform }}-${{ matrix.arch }}
-          path: |
-            plugin/bin/${{ matrix.platform }}/
+          path: plugin/bin/${{ matrix.platform }}/
           retention-days: 7
+          if-no-files-found: error
   
   package:
     name: Package Release
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
     
     steps:
       - name: Checkout repository
@@ -131,50 +119,67 @@ jobs:
         with:
           path: artifacts/
       
+      - name: Verify downloaded artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          ls -la artifacts/
+          for dir in artifacts/*/; do
+            echo "Contents of $dir:"
+            ls -la "$dir"
+          done
+      
       - name: Organize plugin structure
         run: |
           mkdir -p release/addons/gdai/bin
           
-          # Copy libraries
-          cp -r artifacts/gdai-windows-x86_64/* release/addons/gdai/bin/
-          cp -r artifacts/gdai-linux-x86_64/* release/addons/gdai/bin/
-          cp -r artifacts/gdai-macos-universal/* release/addons/gdai/bin/
+          echo "Copying platform binaries..."
           
-          # Copy plugin files
+          # Copy Windows binaries
+          if [ -d "artifacts/gdai-windows-x86_64" ]; then
+            mkdir -p release/addons/gdai/bin/windows
+            cp -r artifacts/gdai-windows-x86_64/* release/addons/gdai/bin/windows/
+            echo "✅ Windows binaries copied"
+          fi
+          
+          # Copy Linux binaries
+          if [ -d "artifacts/gdai-linux-x86_64" ]; then
+            mkdir -p release/addons/gdai/bin/linux
+            cp -r artifacts/gdai-linux-x86_64/* release/addons/gdai/bin/linux/
+            echo "✅ Linux binaries copied"
+          fi
+          
+          # Copy macOS binaries
+          if [ -d "artifacts/gdai-macos-universal" ]; then
+            mkdir -p release/addons/gdai/bin/macos
+            cp -r artifacts/gdai-macos-universal/* release/addons/gdai/bin/macos/
+            echo "✅ macOS binaries copied"
+          fi
+          
+          echo "Binary structure:"
+          ls -laR release/addons/gdai/bin/
+      
+      - name: Generate multi-platform gdextension file
+        run: |
+          python tools/generate_gdextension.py --output release/addons/gdai/gdai.gdextension --all-platforms
+          
+          echo "Generated gdextension file:"
+          cat release/addons/gdai/gdai.gdextension
+      
+      - name: Copy plugin files
+        run: |
+          # Copy core plugin files
           cp plugin/plugin.cfg release/addons/gdai/
           cp plugin/plugin.gd release/addons/gdai/
           
-          # Copy plugin scripts if they exist
+          # Copy plugin directory if it exists
           if [ -d "plugin/plugin" ]; then
             cp -r plugin/plugin release/addons/gdai/
           fi
+          
+          echo "Plugin structure:"
+          ls -laR release/addons/gdai/
       
-      - name: Generate multi-platform gdextension
-        run: |
-          python -c "
-          from pathlib import Path
-          
-          content = '''[configuration]
-          entry_symbol = \"gdai_library_init\"
-          compatibility_minimum = \"4.4\"
-          reloadable = true
-          
-          [libraries]
-          # Windows
-          windows.editor.x86_64 = \"res://addons/gdai/bin/windows/libgdai.windows.editor.x86_64.dll\"
-          
-          # Linux
-          linux.editor.x86_64 = \"res://addons/gdai/bin/linux/libgdai.linux.editor.x86_64.so\"
-          
-          # macOS
-          macos.editor = \"res://addons/gdai/bin/macos/libgdai.macos.editor.universal.dylib\"
-          '''
-          
-          Path('release/addons/gdai/gdai.gdextension').write_text(content.strip())
-          print('Generated gdai.gdextension')
-          "
-      
-      - name: Create README
+      - name: Create README for plugin
         run: |
           cat > release/addons/gdai/README.md << 'EOF'
           # GodotAI - AI-Powered Editor Plugin
@@ -184,7 +189,7 @@ jobs:
           ## Installation
           
           1. Copy the `gdai` folder to your Godot project's `addons/` directory
-          2. Restart Godot or reload the project
+          2. Restart Godot or reload the project  
           3. Enable the plugin in Project → Project Settings → Plugins
           
           ## Requirements
@@ -192,7 +197,7 @@ jobs:
           - Godot 4.4 or higher
           - One of the supported platforms:
             - Windows x86_64
-            - Linux x86_64
+            - Linux x86_64  
             - macOS Universal (x86_64 + ARM64)
           
           ## Documentation
@@ -204,29 +209,60 @@ jobs:
           MIT License - See LICENSE file for details
           EOF
       
+      - name: Copy LICENSE
+        run: |
+          if [ -f "LICENSE" ]; then
+            cp LICENSE release/addons/gdai/
+          fi
+      
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="dev-${GITHUB_SHA::7}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}"
+      
       - name: Create archive
         run: |
           cd release
-          zip -r ../godotai-${{ github.ref_name }}.zip addons/
+          zip -r ../godotai-${{ steps.version.outputs.version }}.zip addons/
           cd ..
           
           # Create checksums
-          sha256sum godotai-${{ github.ref_name }}.zip > checksums.txt
+          sha256sum godotai-${{ steps.version.outputs.version }}.zip > checksums.txt
+          
+          echo "Archive created:"
+          ls -lh godotai-${{ steps.version.outputs.version }}.zip
+      
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: godotai-package-${{ steps.version.outputs.version }}
+          path: |
+            godotai-${{ steps.version.outputs.version }}.zip
+            checksums.txt
+          retention-days: 30
       
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
         with:
           files: |
-            godotai-${{ github.ref_name }}.zip
+            godotai-${{ steps.version.outputs.version }}.zip
             checksums.txt
           body: |
-            ## GodotAI ${{ github.ref_name }}
+            ## GodotAI ${{ steps.version.outputs.version }}
             
             ### Installation
             
-            1. Download `godotai-${{ github.ref_name }}.zip`
-            2. Extract to your Godot project's `addons/` directory
-            3. Enable in Project → Project Settings → Plugins
+            1. Download `godotai-${{ steps.version.outputs.version }}.zip`
+            2. Extract the `addons/gdai/` folder to your Godot project's `addons/` directory
+            3. Restart Godot or reload the project
+            4. Enable the plugin in Project → Project Settings → Plugins
             
             ### Supported Platforms
             
@@ -234,8 +270,16 @@ jobs:
             - ✅ Linux x86_64
             - ✅ macOS Universal (Intel + Apple Silicon)
             
+            ### What's New
+            
+            See the commit history for detailed changes.
+            
             ### Checksums
             
             See `checksums.txt` for SHA256 verification.
+            
+            ---
+            
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.version.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

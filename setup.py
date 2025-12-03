@@ -6,19 +6,31 @@ This script discovers and executes build tools from the tools/ directory.
 Each tool is self-describing and can accept custom arguments.
 
 Usage:
-    python setup.py             # Interactive menu
-    python setup.py <tool>      # Run specific tool (future)
+    python setup.py                              # Interactive menu
+    python setup.py <tool> --non-interactive --args '{...}'  # Non-interactive mode
 """
 
 import sys
+import os
+import argparse
+import json
 from typing import Dict, Any, Optional
 from pathlib import Path
 
 
+def is_non_interactive() -> bool:
+    """Check if running in non-interactive mode."""
+    return (
+        os.getenv('CI') == 'true' or 
+        os.getenv('GODOTAI_NON_INTERACTIVE') == '1' or
+        not sys.stdin.isatty()
+    )
+
+
 def clear_screen():
     """Clear the terminal screen."""
-    import os
-    os.system('cls' if os.name == 'nt' else 'clear')
+    if not is_non_interactive():
+        os.system('cls' if os.name == 'nt' else 'clear')
 
 
 def display_header():
@@ -140,6 +152,50 @@ def prompt_for_arguments(tool) -> Dict[str, Any]:
     return args
 
 
+def run_non_interactive(tool_name: str, tool_args: Dict[str, Any]) -> int:
+    """
+    Run a tool non-interactively with provided arguments.
+    
+    Args:
+        tool_name: Name of tool to execute
+        tool_args: Pre-filled arguments for the tool
+        
+    Returns:
+        Exit code
+    """
+    from tools import get_tool_by_name
+    
+    try:
+        tool = get_tool_by_name(tool_name, include_hidden=True)
+        
+        print(f"🔧 Executing '{tool.name}'...")
+        
+        # Validate arguments
+        valid, error = tool.validate_args(tool_args)
+        if not valid:
+            print(f"❌ Argument validation failed: {error}", file=sys.stderr)
+            return 1
+        
+        # Execute
+        result = tool.execute(tool_args)
+        
+        if result == 0:
+            print(f"✅ '{tool.name}' completed successfully")
+        else:
+            print(f"❌ '{tool.name}' failed with exit code {result}", file=sys.stderr)
+        
+        return result
+        
+    except ValueError as e:
+        print(f"❌ Error: Tool '{tool_name}' not found", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"❌ Fatal error: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def run_interactive():
     """Run the interactive menu."""
     # Import here to avoid circular imports
@@ -217,10 +273,61 @@ def run_interactive():
         input("\nPress Enter to continue...")
 
 
+def parse_cli_args():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description='GodotAI Build System',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  Interactive mode:
+    python setup.py
+    
+  Non-interactive mode:
+    python setup.py ci-build --non-interactive --args '{"godot_version": "4.4", "arch": "x86_64"}'
+    python setup.py init --non-interactive --args '{"version": "4.4", "init_submodules": true}'
+        """
+    )
+    
+    parser.add_argument('tool', nargs='?', 
+                       help='Tool name to execute (omit for interactive mode)')
+    parser.add_argument('--non-interactive', action='store_true',
+                       help='Run in non-interactive mode')
+    parser.add_argument('--args', type=str, default='{}',
+                       help='JSON string of arguments for the tool')
+    
+    return parser.parse_args()
+
+
 def main():
     """Main entry point."""
     try:
+        cli_args = parse_cli_args()
+        
+        # Determine mode
+        non_interactive_mode = (
+            cli_args.non_interactive or 
+            is_non_interactive() or 
+            cli_args.tool is not None
+        )
+        
+        # Non-interactive mode
+        if cli_args.tool and non_interactive_mode:
+            # Parse arguments
+            tool_args = {}
+            if cli_args.args:
+                try:
+                    tool_args = json.loads(cli_args.args)
+                except json.JSONDecodeError as e:
+                    print(f"❌ Invalid JSON arguments: {e}", file=sys.stderr)
+                    print(f"Received: {cli_args.args}", file=sys.stderr)
+                    return 1
+            
+            return run_non_interactive(cli_args.tool, tool_args)
+        
+        # Interactive mode (existing behavior)
         return run_interactive()
+        
     except KeyboardInterrupt:
         print("\n\nExiting...")
         return 0

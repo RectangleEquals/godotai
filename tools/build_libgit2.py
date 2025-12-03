@@ -25,6 +25,14 @@ class BuildLibgit2Tool(BaseTool):
         return "Build libgit2 git operations library (required for git integration)"
     
     @property
+    def category(self) -> str:
+        return "build"
+    
+    @property
+    def visible(self) -> bool:
+        return False  # Hidden from main menu, called by build orchestrator
+    
+    @property
     def arguments(self):
         return [
             ToolArgument(

@@ -13,12 +13,15 @@ from pathlib import Path
 from tools.base_tool import BaseTool
 
 
-def discover_tools() -> List[BaseTool]:
+def discover_tools(include_hidden: bool = False) -> List[BaseTool]:
     """
     Discover all tools in the tools/ directory.
     
     Scans all .py files in tools/ and looks for classes that
     inherit from BaseTool (but are not BaseTool itself).
+    
+    Args:
+        include_hidden: If True, include tools with visible=False
     
     Returns:
         List of instantiated tool objects, sorted by name
@@ -59,7 +62,11 @@ def discover_tools() -> List[BaseTool]:
                 attr is not BaseTool):
                 try:
                     tool_instance = attr()
-                    tools.append(tool_instance)
+                    
+                    # Filter by visibility if requested
+                    if include_hidden or tool_instance.visible:
+                        tools.append(tool_instance)
+                        
                 except Exception as e:
                     print(f"Warning: Failed to instantiate tool '{attr_name}': {e}")
                     continue
@@ -68,12 +75,13 @@ def discover_tools() -> List[BaseTool]:
     return sorted(tools, key=lambda t: t.name)
 
 
-def get_tool_by_name(name: str) -> BaseTool:
+def get_tool_by_name(name: str, include_hidden: bool = True) -> BaseTool:
     """
     Get a specific tool by name.
     
     Args:
         name: Tool name to find
+        include_hidden: If True, search hidden tools too
         
     Returns:
         Tool instance
@@ -81,10 +89,25 @@ def get_tool_by_name(name: str) -> BaseTool:
     Raises:
         ValueError: If tool not found
     """
-    tools = discover_tools()
+    tools = discover_tools(include_hidden=include_hidden)
     
     for tool in tools:
         if tool.name == name:
             return tool
     
     raise ValueError(f"Tool '{name}' not found")
+
+
+def discover_tools_by_category(category: str, include_hidden: bool = True) -> List[BaseTool]:
+    """
+    Discover tools in a specific category.
+    
+    Args:
+        category: Category name to filter by
+        include_hidden: If True, include tools with visible=False
+        
+    Returns:
+        List of tool instances in the category, sorted by name
+    """
+    tools = discover_tools(include_hidden=include_hidden)
+    return [tool for tool in tools if tool.category == category]

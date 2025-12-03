@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "GodotAI Tool System Configuration",
+  
+  "build": {
+    "description": "Main build orchestrator configuration",
+    "priority": [
+      "build-libgit2",
+      "build-libhv",
+      "build-plugin"
+    ],
+    "skip_if_exists": true,
+    "rebuild_prompt": true
+  },
+  
+  "build-libgit2": {
+    "description": "libgit2 build configuration",
+    "output_dir": "build_ext_libs",
+    "windows_lib": "git2.lib",
+    "unix_lib": "libgit2.a"
+  },
+  
+  "build-libhv": {
+    "description": "libhv build configuration",
+    "output_dir": "build_ext_libs",
+    "windows_lib": "hv_static.lib",
+    "unix_lib": "libhv_static.a"
+  },
+  
+  "build-plugin": {
+    "description": "GodotAI plugin build configuration",
+    "output_dir": "build/cmake/bin",
+    "install_dir": "plugin/bin"
+  },
+  
+  "install": {
+    "description": "Plugin installation configuration",
+    "source_dir": "plugin",
+    "addon_name": "gdai",
+    "create_project_scaffold": true,
+    "platform_subdirs": true,
+    "files_to_copy": [
+      "gdai.gdextension",
+      "plugin.cfg",
+      "plugin.gd"
+    ],
+    "directories_to_copy": [
+      "bin",
+      "plugin"
+    ]
+  },
+  
+  "clean": {
+    "description": "Clean operation configuration",
+    "targets": {
+      "build": [
+        "build/cmake",
+        "build/scons"
+      ],
+      "dependencies": [
+        "build_ext_libs",
+        "third_party/libgit2/build",
+        "third_party/libhv/build"
+      ],
+      "plugin": [
+        "plugin/bin"
+      ],
+      "config": [
+        ".buildconfig.json"
+      ],
+      "all": [
+        "build",
+        "build_ext_libs",
+        "plugin/bin",
+        "third_party/*/build",
+        ".buildconfig.json"
+      ]
+    }
+  }
+}

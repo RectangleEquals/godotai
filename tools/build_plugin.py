@@ -14,16 +14,24 @@ from tools.base_tool import BaseTool, ToolArgument
 from tools.config import BuildConfig
 
 
-class BuildCMakeTool(BaseTool):
-    """Build the GDExtension using CMake."""
+class BuildPluginTool(BaseTool):
+    """Build the GodotAI plugin using CMake."""
     
     @property
     def name(self) -> str:
+        return "build-plugin"
+    
+    @property
+    def category(self) -> str:
         return "build"
     
     @property
+    def visible(self) -> bool:
+        return False  # Only visible to other tools, not in main menu
+    
+    @property
     def description(self) -> str:
-        return "Build the GDExtension library using CMake"
+        return "Build the GodotAI plugin library using CMake"
     
     @property
     def arguments(self):
@@ -76,7 +84,7 @@ class BuildCMakeTool(BaseTool):
             ),
             ToolArgument(
                 name="install",
-                description="Install to plugin/bin after building",
+                description="Copy built library to plugin staging directory",
                 type=bool,
                 required=False,
                 default=True

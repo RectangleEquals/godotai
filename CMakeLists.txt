@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.13)
 # ============================================================================
 
 project(
-    GodotAI
+    gdai
     VERSION 0.1.0
     DESCRIPTION "AI-powered editor extension for Godot"
     LANGUAGES CXX
@@ -140,24 +140,42 @@ else()
 endif()
 
 # ============================================================================
-# GodotAI Source Files
+# GDAI Source Files
 # ============================================================================
 
-file(GLOB_RECURSE GODOTAI_SOURCES
+file(GLOB_RECURSE GDAI_SOURCES
     CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/src/*.cpp"
 )
 
 # Exclude test files unless testing is enabled
 if(NOT GODOTAI_ENABLE_TESTING)
-    list(FILTER GODOTAI_SOURCES EXCLUDE REGEX ".*test.*\\.cpp$")
+    list(FILTER GDAI_SOURCES EXCLUDE REGEX ".*test.*\\.cpp$")
+endif()
+
+# Check if we have any source files
+if(NOT GDAI_SOURCES)
+    message(WARNING "No source files found in src/. Creating minimal stub.")
+    # Create a minimal source file to allow the build to proceed
+    set(GDAI_STUB_SOURCE "${CMAKE_BINARY_DIR}/gdai_stub.cpp")
+    file(WRITE "${GDAI_STUB_SOURCE}"
+        "// Temporary stub file - replace with actual implementation\n"
+        "#include <godot_cpp/core/class_db.hpp>\n"
+        "extern \"C\" {\n"
+        "GDExtensionBool GDE_EXPORT gdai_library_init(GDExtensionInterfaceGetProcAddress p_get_proc_address, GDExtensionClassLibraryPtr p_library, GDExtensionInitialization *r_initialization) {\n"
+        "    return true;\n"
+        "}\n"
+        "}\n"
+    )
+    set(GDAI_SOURCES "${GDAI_STUB_SOURCE}")
+    message(STATUS "Created stub source file: ${GDAI_STUB_SOURCE}")
 endif()
 
 # ============================================================================
-# GodotAI Library Target
+# GDAI Library Target
 # ============================================================================
 
-add_library(${PROJECT_NAME} SHARED ${GODOTAI_SOURCES})
+add_library(${PROJECT_NAME} SHARED ${GDAI_SOURCES})
 
 # Set C++ standard (must be at least C++17 for godot-cpp)
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -170,7 +188,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # Output naming to match godot-cpp convention
 set_target_properties(${PROJECT_NAME} PROPERTIES
     PREFIX "lib"
-    OUTPUT_NAME "godotai${GODOTCPP_SUFFIX}"
+    OUTPUT_NAME "gdai${GODOTCPP_SUFFIX}"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
@@ -286,10 +304,21 @@ endif()
 # Installation
 # ============================================================================
 
-# Install the library to plugin/bin directory for Godot
+# Determine platform-specific subdirectory
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(PLATFORM_SUBDIR "windows")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(PLATFORM_SUBDIR "linux")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(PLATFORM_SUBDIR "macos")
+else()
+    set(PLATFORM_SUBDIR "unknown")
+endif()
+
+# Install the library to plugin/bin/<platform>/ directory for staging
 install(TARGETS ${PROJECT_NAME}
-    LIBRARY DESTINATION "${CMAKE_SOURCE_DIR}/plugin/bin"
-    RUNTIME DESTINATION "${CMAKE_SOURCE_DIR}/plugin/bin"
+    LIBRARY DESTINATION "${CMAKE_SOURCE_DIR}/plugin/bin/${PLATFORM_SUBDIR}"
+    RUNTIME DESTINATION "${CMAKE_SOURCE_DIR}/plugin/bin/${PLATFORM_SUBDIR}"
 )
 
 # ============================================================================
@@ -305,6 +334,6 @@ message(STATUS "Hot Reload: ${GODOTAI_USE_HOT_RELOAD}")
 message(STATUS "Dev Build: ${GODOTAI_DEV_BUILD}")
 message(STATUS "libgit2: ${GODOTAI_HAS_LIBGIT2}")
 message(STATUS "libhv: ${GODOTAI_HAS_LIBHV}")
-message(STATUS "Output: libgodotai${GODOTCPP_SUFFIX}")
+message(STATUS "Output: libgdai${GODOTCPP_SUFFIX}")
 message(STATUS "===================================")
 message(STATUS "")

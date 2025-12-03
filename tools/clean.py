@@ -1,19 +1,19 @@
 """
 Clean tool.
 
-Removes build artifacts and optionally configuration files.
+Removes build artifacts, intermediate files, and optionally configuration.
+Uses tools/config.json to determine what to clean.
 """
 
 import shutil
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from tools.base_tool import BaseTool, ToolArgument
-from tools.config import BuildConfig
 
 
 class CleanTool(BaseTool):
-    """Clean build artifacts."""
+    """Clean build artifacts and configuration."""
     
     @property
     def name(self) -> str:
@@ -24,6 +24,10 @@ class CleanTool(BaseTool):
         return "Clean build artifacts and optionally configuration"
     
     @property
+    def category(self) -> str:
+        return "clean"
+    
+    @property
     def arguments(self):
         return [
             ToolArgument(
@@ -32,7 +36,7 @@ class CleanTool(BaseTool):
                 type=str,
                 required=False,
                 default="build",
-                choices=["build", "config", "all", "everything"]
+                choices=["build", "dependencies", "plugin", "config", "all"]
             ),
         ]
     
@@ -42,111 +46,167 @@ class CleanTool(BaseTool):
         target = args.get("target", "build")
         
         print("\n" + "=" * 70)
-        print("Cleaning GodotAI Project")
+        print("Cleaning Build Artifacts")
         print("=" * 70)
-        print(f"\nTarget: {target}\n")
-        
-        cleaned_items = []
-        
-        # Clean build directory
-        if target in ["build", "all", "everything"]:
-            cleaned_items.extend(self._clean_build_artifacts(root_dir))
-        
-        # Clean configuration
-        if target in ["config", "all", "everything"]:
-            cleaned_items.extend(self._clean_config(root_dir))
-        
-        # Clean everything (including IDE files)
-        if target == "everything":
-            cleaned_items.extend(self._clean_ide_files(root_dir))
-        
-        # Show results
+        print(f"\n  Target: {target}")
         print()
-        if cleaned_items:
-            self.print_success(f"Cleaned {len(cleaned_items)} items")
-            
-            # Show summary (first 10 items)
-            print("\nCleaned:")
-            for item in cleaned_items[:10]:
-                print(f"  🗑️  {item}")
-            
-            if len(cleaned_items) > 10:
-                print(f"  ... and {len(cleaned_items) - 10} more")
+        
+        # Get clean configuration
+        config = self.get_tool_config()
+        targets = config.get("targets", {})
+        
+        if target not in targets:
+            self.print_error(f"Unknown clean target: {target}")
+            print(f"\nAvailable targets: {', '.join(targets.keys())}")
+            return 1
+        
+        # Confirm if cleaning config or all
+        if target in ["config", "all"]:
+            response = input(f"⚠️  This will remove configuration. Continue? (y/N): ").strip().lower()
+            if response not in ['y', 'yes']:
+                print("Clean cancelled")
+                return 0
+        
+        # Get paths to clean
+        patterns = targets[target]
+        
+        if not isinstance(patterns, list):
+            patterns = [patterns]
+        
+        # Clean each pattern
+        cleaned_count = 0
+        for pattern in patterns:
+            cleaned_count += self._clean_pattern(root_dir, pattern)
+        
+        # Summary
+        print("\n" + "=" * 70)
+        if cleaned_count > 0:
+            self.print_success(f"Cleaned {cleaned_count} item(s)")
         else:
             self.print_info("Nothing to clean")
+        print("=" * 70)
         
-        print("\n" + "=" * 70)
         return 0
     
-    def _clean_build_artifacts(self, root_dir: Path) -> list[str]:
-        """Clean build artifacts."""
-        cleaned = []
+    def _clean_pattern(self, root_dir: Path, pattern: str) -> int:
+        """
+        Clean files/directories matching a pattern.
         
-        # Build directory
-        build_dir = root_dir / "build"
-        if build_dir.exists():
-            shutil.rmtree(build_dir)
-            cleaned.append("build/")
+        Args:
+            root_dir: Repository root directory
+            pattern: Path pattern to clean (supports wildcards)
+            
+        Returns:
+            Number of items cleaned
+        """
+        cleaned = 0
         
-        # External libraries
-        ext_libs_dir = root_dir / "build_ext_libs"
-        if ext_libs_dir.exists():
-            shutil.rmtree(ext_libs_dir)
-            cleaned.append("build_ext_libs/")
-        
-        # SCons files
-        scons_files = [
-            ".sconsign.dblite",
-            ".sconf_temp",
-            "config.log"
-        ]
-        for file in scons_files:
-            file_path = root_dir / file
-            if file_path.exists():
-                if file_path.is_dir():
-                    shutil.rmtree(file_path)
+        # Handle glob patterns
+        if '*' in pattern:
+            # Split pattern into parts
+            parts = Path(pattern).parts
+            base_parts = []
+            glob_parts = []
+            found_wildcard = False
+            
+            for part in parts:
+                if '*' in part or found_wildcard:
+                    glob_parts.append(part)
+                    found_wildcard = True
                 else:
-                    file_path.unlink()
-                cleaned.append(file)
-        
-        # Object files in godot-cpp
-        godot_cpp_dir = root_dir / "third_party" / "godot-cpp"
-        if godot_cpp_dir.exists():
-            for pattern in ["*.o", "*.obj", "*.a", "*.lib", "*.os"]:
-                for file in godot_cpp_dir.rglob(pattern):
-                    file.unlink()
-                    cleaned.append(str(file.relative_to(root_dir)))
+                    base_parts.append(part)
+            
+            if base_parts:
+                base_dir = root_dir / Path(*base_parts)
+            else:
+                base_dir = root_dir
+            
+            glob_pattern = str(Path(*glob_parts)) if glob_parts else '*'
+            
+            if not base_dir.exists():
+                return 0
+            
+            # Find matching paths
+            for path in base_dir.glob(glob_pattern):
+                if path.exists():
+                    if self._remove_path(path):
+                        cleaned += 1
+        else:
+            # Direct path
+            path = root_dir / pattern
+            if path.exists():
+                if self._remove_path(path):
+                    cleaned += 1
         
         return cleaned
     
-    def _clean_config(self, root_dir: Path) -> list[str]:
-        """Clean configuration files."""
-        cleaned = []
+    def _remove_path(self, path: Path) -> bool:
+        """
+        Remove a file or directory.
         
-        config = BuildConfig(root_dir)
-        if config.exists():
-            config.delete()
-            cleaned.append(".buildconfig.json")
-        
-        return cleaned
+        Args:
+            path: Path to remove
+            
+        Returns:
+            True if removed successfully
+        """
+        try:
+            if path.is_dir():
+                # Calculate size before removing
+                size = self._calculate_dir_size(path)
+                size_mb = size / (1024 * 1024)
+                
+                print(f"🗑️  Removing {path.name}/ ({size_mb:.1f} MB)...")
+                shutil.rmtree(path)
+            else:
+                size = path.stat().st_size
+                size_kb = size / 1024
+                
+                print(f"🗑️  Removing {path.name} ({size_kb:.1f} KB)...")
+                path.unlink()
+            
+            return True
+            
+        except Exception as e:
+            self.print_warning(f"Failed to remove {path}: {e}")
+            return False
     
-    def _clean_ide_files(self, root_dir: Path) -> list[str]:
-        """Clean IDE-generated files."""
-        cleaned = []
+    def _calculate_dir_size(self, directory: Path) -> int:
+        """
+        Calculate total size of directory.
         
-        # compile_commands.json
-        compile_commands = root_dir / "compile_commands.json"
-        if compile_commands.exists():
-            compile_commands.unlink()
-            cleaned.append("compile_commands.json")
+        Args:
+            directory: Directory to calculate
+            
+        Returns:
+            Total size in bytes
+        """
+        total = 0
+        try:
+            for entry in directory.rglob('*'):
+                if entry.is_file():
+                    total += entry.stat().st_size
+        except:
+            pass
+        return total
+    
+    def clean_specific_paths(self, paths: List[str]) -> int:
+        """
+        Clean specific paths. Can be called by other tools.
         
-        # Python cache
-        for pycache in root_dir.rglob("__pycache__"):
-            shutil.rmtree(pycache)
-            cleaned.append(str(pycache.relative_to(root_dir)))
+        Args:
+            paths: List of paths to clean (relative to repo root)
+            
+        Returns:
+            Number of items cleaned
+        """
+        root_dir = self.get_root_dir()
+        cleaned = 0
         
-        for pyc in root_dir.rglob("*.pyc"):
-            pyc.unlink()
-            cleaned.append(str(pyc.relative_to(root_dir)))
+        for path_str in paths:
+            path = root_dir / path_str
+            if path.exists():
+                if self._remove_path(path):
+                    cleaned += 1
         
         return cleaned

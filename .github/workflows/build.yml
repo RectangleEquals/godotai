@@ -72,6 +72,7 @@ jobs:
           GODOTAI_NON_INTERACTIVE: "1"
           GODOT_VERSION: ${{ env.GODOT_VERSION }}
           BUILD_ARCH: ${{ matrix.arch }}
+          PYTHONUTF8: ${{ matrix.platform == 'windows' ? '1' : '' }}
         run: |
           python -c "
           import os

@@ -13,7 +13,7 @@ from pathlib import Path
 from tools.base_tool import BaseTool
 
 
-def discover_tools(include_hidden: bool = False) -> List[BaseTool]:
+def discover_tools(include_hidden: bool = True) -> List[BaseTool]:
     """
     Discover all tools in the tools/ directory.
     
@@ -21,7 +21,9 @@ def discover_tools(include_hidden: bool = False) -> List[BaseTool]:
     inherit from BaseTool (but are not BaseTool itself).
     
     Args:
-        include_hidden: If True, include tools with visible=False
+        include_hidden: If True (default), include all tools.
+                       If False, only include tools where visible=True.
+                       Note: This only affects MENU DISPLAY, not discoverability!
     
     Returns:
         List of instantiated tool objects, sorted by name
@@ -64,6 +66,8 @@ def discover_tools(include_hidden: bool = False) -> List[BaseTool]:
                     tool_instance = attr()
                     
                     # Filter by visibility if requested
+                    # NOTE: include_hidden=False is only for menu filtering!
+                    # Tools should ALWAYS be discoverable for execute_tool() calls
                     if include_hidden or tool_instance.visible:
                         tools.append(tool_instance)
                         
@@ -81,7 +85,8 @@ def get_tool_by_name(name: str, include_hidden: bool = True) -> BaseTool:
     
     Args:
         name: Tool name to find
-        include_hidden: If True, search hidden tools too
+        include_hidden: If True (default), search all tools including hidden ones.
+                       Should almost always be True for programmatic access.
         
     Returns:
         Tool instance
@@ -104,7 +109,7 @@ def discover_tools_by_category(category: str, include_hidden: bool = True) -> Li
     
     Args:
         category: Category name to filter by
-        include_hidden: If True, include tools with visible=False
+        include_hidden: If True (default), include tools with visible=False
         
     Returns:
         List of tool instances in the category, sorted by name

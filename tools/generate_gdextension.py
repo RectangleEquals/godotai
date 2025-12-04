@@ -9,6 +9,7 @@ import argparse
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional
+from tools.base_tool import BaseTool
 
 
 def detect_platform() -> str:
@@ -227,6 +228,67 @@ def main():
         print(f"❌ Error: {e}", file=sys.stderr)
         return 1
 
+# Add this to the END of tools/generate_gdextension.py
+
+from typing import Dict, Any
+from tools.base_tool import BaseTool
+
+
+class GenerateGDExtensionTool(BaseTool):
+    """Generate gdextension file based on built libraries."""
+    
+    @property
+    def name(self) -> str:
+        return "generate-gdextension"
+    
+    @property
+    def description(self) -> str:
+        return "Generate gdai.gdextension file from built libraries"
+    
+    @property
+    def category(self) -> str:
+        return "build"
+    
+    @property
+    def visible(self) -> bool:
+        return False  # Hidden from menu, called by build-plugin
+    
+    def execute(self, args: Dict[str, Any]) -> int:
+        """Execute generation for current platform."""
+        root_dir = self.get_root_dir()
+        output_path = root_dir / "plugin" / "gdai.gdextension"
+        
+        try:
+            # Detect current platform
+            current_platform = detect_platform()
+            
+            # Get architecture from args or use default
+            arch = args.get("architecture", "x86_64")
+            if arch == "universal":
+                arch = "universal"
+            
+            print(f"Generating gdextension for {current_platform} {arch}...")
+            
+            # Generate for current platform only (for dev builds)
+            content = generate_gdextension_content(
+                platforms=[current_platform],
+                targets=["editor"],
+                architectures={
+                    current_platform: [arch]
+                }
+            )
+            
+            write_gdextension_file(output_path, content)
+            print(f"✅ Generated: {output_path}")
+            print(f"   Platform: {current_platform}.editor.{arch}")
+            
+            return 0
+            
+        except Exception as e:
+            print(f"❌ Error generating gdextension: {e}")
+            import traceback
+            traceback.print_exc()
+            return 1
 
 if __name__ == "__main__":
     sys.exit(main())

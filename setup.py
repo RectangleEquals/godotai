@@ -201,17 +201,26 @@ def run_interactive():
     # Import here to avoid circular imports
     from tools import discover_tools
     
-    tools = discover_tools()
+    # Get ALL tools (including hidden ones for execution)
+    all_tools = discover_tools(include_hidden=True)
     
-    if not tools:
+    if not all_tools:
         print("❌ Error: No tools found!")
         print("\nMake sure you have tool files in the tools/ directory.")
         return 1
     
+    # Filter to only visible tools for menu display
+    visible_tools = [tool for tool in all_tools if tool.visible]
+    
+    if not visible_tools:
+        print("❌ Error: No visible tools found!")
+        return 1
+    
     while True:
-        display_menu(tools)
+        # Display only visible tools in the menu
+        display_menu(visible_tools)
         
-        choice = input("Select a tool (1-{} or q): ".format(len(tools))).strip().lower()
+        choice = input("Select a tool (1-{} or q): ".format(len(visible_tools))).strip().lower()
         
         if choice == 'q':
             print("\nExiting...")
@@ -220,15 +229,15 @@ def run_interactive():
         # Validate numeric choice
         try:
             index = int(choice) - 1
-            if not (0 <= index < len(tools)):
+            if not (0 <= index < len(visible_tools)):
                 raise ValueError()
         except ValueError:
             print("\n❌ Invalid selection. Press Enter to continue...")
             input()
             continue
         
-        # Get the selected tool
-        tool = tools[index]
+        # Get the selected tool from visible list
+        tool = visible_tools[index]
         
         # Prompt for arguments
         try:

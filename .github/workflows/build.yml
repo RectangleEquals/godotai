@@ -65,42 +65,83 @@ jobs:
         if: matrix.platform == 'macos'
         run: |
           brew install cmake
-      
+
       - name: Build GodotAI
         env:
           CI: true
           GODOTAI_NON_INTERACTIVE: "1"
           GODOT_VERSION: ${{ env.GODOT_VERSION }}
           BUILD_ARCH: ${{ matrix.arch }}
-          PYTHONUTF8: ${{ '1' if matrix.platform == 'windows' else '' }}
         run: |
-          python -c "
-          import os
-          import sys
-          
-          # Import and execute tool directly
-          try:
-              from tools import get_tool_by_name
-              
-              tool = get_tool_by_name('ci-build', include_hidden=True)
-              
-              args = {
-                  'godot_version': os.environ['GODOT_VERSION'],
-                  'arch': os.environ['BUILD_ARCH'],
-                  'target': 'editor',
-                  'build_type': 'Release',
-                  'precision': 'single',
-                  'verbose': False
-              }
-              
-              result = tool.execute(args)
-              sys.exit(result)
-          except Exception as e:
-              print(f'Error: {e}', file=sys.stderr)
-              import traceback
-              traceback.print_exc()
-              sys.exit(1)
-          "
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            # use bash on Windows (Git for Windows) — export for the python call
+            export PYTHONUTF8=1
+            python -c "
+            import os
+            import sys
+            
+            # Import and execute tool directly
+            try:
+                from tools import get_tool_by_name
+                
+                tool = get_tool_by_name('ci-build', include_hidden=True)
+                
+                args = {
+                    'godot_version': os.environ['GODOT_VERSION'],
+                    'arch': os.environ['BUILD_ARCH'],
+                    'target': 'editor',
+                    'build_type': 'Release',
+                    'precision': 'single',
+                    'verbose': False
+                }
+                
+                result = tool.execute(args)
+                sys.exit(result)
+            except Exception as e:
+                print(f'Error: {e}', file=sys.stderr)
+                import traceback
+                traceback.print_exc()
+                sys.exit(1)
+            "
+          else
+            python -c "
+            import os
+            import sys
+            
+            # Import and execute tool directly
+            try:
+                from tools import get_tool_by_name
+                
+                tool = get_tool_by_name('ci-build', include_hidden=True)
+                
+                args = {
+                    'godot_version': os.environ['GODOT_VERSION'],
+                    'arch': os.environ['BUILD_ARCH'],
+                    'target': 'editor',
+                    'build_type': 'Release',
+                    'precision': 'single',
+                    'verbose': False
+                }
+                
+                result = tool.execute(args)
+                sys.exit(result)
+            except Exception as e:
+                print(f'Error: {e}', file=sys.stderr)
+                import traceback
+                traceback.print_exc()
+                sys.exit(1)
+            "
+          fi
+        shell: bash
+
+      - name: Build GodotAI
+        env:
+          CI: true
+          GODOTAI_NON_INTERACTIVE: "1"
+          GODOT_VERSION: ${{ env.GODOT_VERSION }}
+          BUILD_ARCH: ${{ matrix.arch }}
+        run: |
+          python -c 
       
       - name: Verify build output
         shell: bash

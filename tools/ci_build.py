@@ -6,7 +6,7 @@ This tool is designed to be called by CI systems and is hidden from
 the interactive menu.
 """
 
-import platform
+import platform as sys_platform
 from typing import Dict, Any, List
 from tools.base_tool import BaseTool, ToolArgument
 
@@ -38,13 +38,15 @@ class CIBuildTool(BaseTool):
                 name="godot_version",
                 description="Godot version (e.g., '4.4')",
                 type=str,
-                required=True
+                required=False,
+                default="4.4"
             ),
             ToolArgument(
                 name="arch",
                 description="Target architecture",
                 type=str,
-                required=True,
+                required=False,
+                default="x86_64",
                 choices=["x86_64", "x86_32", "arm64", "universal"]
             ),
             ToolArgument(
@@ -53,11 +55,11 @@ class CIBuildTool(BaseTool):
                 type=str,
                 required=False,
                 default="editor",
-                choices=["editor", "template_debug", "template_release"]
+                choices=["editor"]
             ),
             ToolArgument(
                 name="build_type",
-                description="CMake build type",
+                description="CMake build type for dependencies",
                 type=str,
                 required=False,
                 default="Release",
@@ -100,8 +102,8 @@ class CIBuildTool(BaseTool):
         print("=" * 70)
         print("CI BUILD PIPELINE".center(70))
         print("=" * 70)
-        print(f"Platform: {platform.system()}")
-        print(f"Architecture: {args['arch']}")
+        print(f"Platform: {sys_platform.system()}")
+        print(f"Architecture: {args.get('arch', 'x86_64')}")
         print(f"Target: {args.get('target', 'editor')}")
         print(f"Build Type: {args.get('build_type', 'Release')}")
         print("=" * 70)
@@ -110,7 +112,7 @@ class CIBuildTool(BaseTool):
         if not args.get("skip_init", False):
             print("\n[1/4] Initializing project...")
             result = self.execute_tool("init", {
-                "version": args["godot_version"],
+                "version": args.get("godot_version", "4.4"),
                 "config": "",  # Use default config
                 "cpp_bindings_branch": "",  # Use default branch
                 "init_submodules": True,
@@ -129,8 +131,8 @@ class CIBuildTool(BaseTool):
             
             print("\n[2/4] Building libgit2...")
             result = self.execute_tool("build-libgit2", {
-                "build_type": build_type,
-                "force_rebuild": False
+                "config": build_type,  # Use 'config' not 'build_type'
+                "clean": False
             })
             if result != 0:
                 self.print_error("libgit2 build failed")
@@ -139,8 +141,8 @@ class CIBuildTool(BaseTool):
             
             print("\n[3/4] Building libhv...")
             result = self.execute_tool("build-libhv", {
-                "build_type": build_type,
-                "force_rebuild": False
+                "config": build_type,  # Use 'config' not 'build_type'
+                "clean": False
             })
             if result != 0:
                 self.print_error("libhv build failed")
@@ -153,13 +155,13 @@ class CIBuildTool(BaseTool):
         # Step 3: Build plugin
         print("\n[4/4] Building plugin...")
         result = self.execute_tool("build-plugin", {
-            "config": "",  # Use default config
+            "platform": "",  # Auto-detect
             "target": args.get("target", "editor"),
-            "arch": args["arch"],
+            "architecture": args.get("arch", "x86_64"),  # Use 'architecture' not 'arch'
             "precision": args.get("precision", "single"),
-            "threads": "0",  # Auto-detect
-            "verbose": args.get("verbose", False),
-            "force_rebuild": True  # Always rebuild in CI
+            "jobs": 0,  # Auto-detect
+            "clean": False,
+            "install": True  # Install to staging
         })
         
         if result != 0:
@@ -168,7 +170,23 @@ class CIBuildTool(BaseTool):
         
         print("✅ Plugin build complete")
         
+        # Show build output location
         print("\n" + "=" * 70)
         self.print_success("CI build pipeline completed successfully!")
         print("=" * 70)
+        
+        # Show where artifacts are
+        root_dir = self.get_root_dir()
+        plugin_bin = root_dir / "plugin" / "bin"
+        
+        if plugin_bin.exists():
+            print("\n📦 Built artifacts:")
+            for platform_dir in plugin_bin.iterdir():
+                if platform_dir.is_dir():
+                    print(f"  Platform: {platform_dir.name}")
+                    for lib_file in platform_dir.iterdir():
+                        if lib_file.is_file():
+                            size_mb = lib_file.stat().st_size / (1024 * 1024)
+                            print(f"    - {lib_file.name} ({size_mb:.2f} MB)")
+        
         return 0

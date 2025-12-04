@@ -69,15 +69,9 @@ jobs:
       - name: Build GodotAI
         env:
           CI: true
+          GODOTAI_NON_INTERACTIVE: "1"
         run: |
-          python setup.py ci-build --non-interactive --args '{
-            "godot_version": "${{ env.GODOT_VERSION }}",
-            "arch": "${{ matrix.arch }}",
-            "target": "editor",
-            "build_type": "Release",
-            "precision": "single",
-            "verbose": false
-          }'
+          python setup.py ci-build --non-interactive --args '{"godot_version": "${{ env.GODOT_VERSION }}", "arch": "${{ matrix.arch }}", "target": "editor", "build_type": "Release", "precision": "single", "verbose": false}'
       
       - name: Verify build output
         shell: bash
@@ -87,7 +81,9 @@ jobs:
             echo "✅ Build artifacts found:"
             ls -la plugin/bin/${{ matrix.platform }}/
           else
-            echo "❌ Build artifacts not found!"
+            echo "❌ Build artifacts not found in plugin/bin/${{ matrix.platform }}"
+            echo "Contents of plugin/bin/:"
+            ls -la plugin/bin/ || echo "plugin/bin/ does not exist"
             exit 1
           fi
       
@@ -122,11 +118,7 @@ jobs:
       - name: Verify downloaded artifacts
         run: |
           echo "Downloaded artifacts:"
-          ls -la artifacts/
-          for dir in artifacts/*/; do
-            echo "Contents of $dir:"
-            ls -la "$dir"
-          done
+          ls -laR artifacts/
       
       - name: Organize plugin structure
         run: |
@@ -160,7 +152,22 @@ jobs:
       
       - name: Generate multi-platform gdextension file
         run: |
-          python tools/generate_gdextension.py --output release/addons/gdai/gdai.gdextension --all-platforms
+          cat > release/addons/gdai/gdai.gdextension << 'EOF'
+          [configuration]
+          entry_symbol = "gdai_library_init"
+          compatibility_minimum = "4.4"
+          reloadable = true
+          
+          [libraries]
+          # Windows
+          windows.editor.x86_64 = "res://addons/gdai/bin/windows/libgdai.windows.editor.x86_64.dll"
+          
+          # Linux
+          linux.editor.x86_64 = "res://addons/gdai/bin/linux/libgdai.linux.editor.x86_64.so"
+          
+          # macOS
+          macos.editor = "res://addons/gdai/bin/macos/libgdai.macos.editor.universal.dylib"
+          EOF
           
           echo "Generated gdextension file:"
           cat release/addons/gdai/gdai.gdextension
@@ -174,6 +181,7 @@ jobs:
           # Copy plugin directory if it exists
           if [ -d "plugin/plugin" ]; then
             cp -r plugin/plugin release/addons/gdai/
+            echo "✅ Plugin UI scripts copied"
           fi
           
           echo "Plugin structure:"
@@ -277,9 +285,5 @@ jobs:
             ### Checksums
             
             See `checksums.txt` for SHA256 verification.
-            
-            ---
-            
-            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.version.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

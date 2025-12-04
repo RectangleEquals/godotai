@@ -6,7 +6,7 @@ This tool is designed to be called by CI systems and is hidden from
 the interactive menu.
 """
 
-import platform as sys_platform
+import platform as platform_module
 from typing import Dict, Any, List
 from tools.base_tool import BaseTool, ToolArgument
 
@@ -102,7 +102,7 @@ class CIBuildTool(BaseTool):
         print("=" * 70)
         print("CI BUILD PIPELINE".center(70))
         print("=" * 70)
-        print(f"Platform: {sys_platform.system()}")
+        print(f"Platform: {platform_module.system()}")
         print(f"Architecture: {args.get('arch', 'x86_64')}")
         print(f"Target: {args.get('target', 'editor')}")
         print(f"Build Type: {args.get('build_type', 'Release')}")

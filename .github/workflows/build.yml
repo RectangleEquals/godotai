@@ -67,6 +67,7 @@ jobs:
           brew install cmake
       
       - name: Build GodotAI
+        shell: bash
         env:
           CI: true
           GODOTAI_NON_INTERACTIVE: "1"

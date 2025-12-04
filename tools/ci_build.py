@@ -29,7 +29,7 @@ class CIBuildTool(BaseTool):
     @property
     def visible(self) -> bool:
         # Hidden from interactive menu - only for CI use
-        return False
+        return True
     
     @property
     def arguments(self) -> List[ToolArgument]:
@@ -112,11 +112,11 @@ class CIBuildTool(BaseTool):
         if not args.get("skip_init", False):
             print("\n[1/4] Initializing project...")
             result = self.execute_tool("init", {
-                "version": args.get("godot_version", "4.4"),
-                "config": "",  # Use default config
-                "cpp_bindings_branch": "",  # Use default branch
-                "init_submodules": True,
-                "force_reinit": False
+                "godot_version": args.get("godot_version", "4.4"),  # FIXED: was "version"
+                "platform": "",  # Use default
+                "config": "",  # Use default
+                "architecture": args.get("arch", "x86_64"),  # FIXED: was missing
+                "jobs": 4  # FIXED: was missing
             })
             if result != 0:
                 self.print_error("Initialization failed")

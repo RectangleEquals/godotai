@@ -67,12 +67,39 @@ jobs:
           brew install cmake
       
       - name: Build GodotAI
-        shell: bash
         env:
           CI: true
           GODOTAI_NON_INTERACTIVE: "1"
+          GODOT_VERSION: ${{ env.GODOT_VERSION }}
+          BUILD_ARCH: ${{ matrix.arch }}
         run: |
-          python setup.py ci-build --non-interactive --args '{"godot_version": "${{ env.GODOT_VERSION }}", "arch": "${{ matrix.arch }}", "target": "editor", "build_type": "Release", "precision": "single", "verbose": false}'
+          python -c "
+          import os
+          import sys
+          
+          # Import and execute tool directly
+          try:
+              from tools import get_tool_by_name
+              
+              tool = get_tool_by_name('ci-build', include_hidden=True)
+              
+              args = {
+                  'godot_version': os.environ['GODOT_VERSION'],
+                  'arch': os.environ['BUILD_ARCH'],
+                  'target': 'editor',
+                  'build_type': 'Release',
+                  'precision': 'single',
+                  'verbose': False
+              }
+              
+              result = tool.execute(args)
+              sys.exit(result)
+          except Exception as e:
+              print(f'Error: {e}', file=sys.stderr)
+              import traceback
+              traceback.print_exc()
+              sys.exit(1)
+          "
       
       - name: Verify build output
         shell: bash

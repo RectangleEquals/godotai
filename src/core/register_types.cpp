@@ -8,6 +8,8 @@
 #include <godot_cpp/godot.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
+#include "godotai.hpp"
+
 using namespace godot;
 
 void initialize_gdai_module(ModuleInitializationLevel p_level) {
@@ -19,6 +21,7 @@ void initialize_gdai_module(ModuleInitializationLevel p_level) {
     // Example: ClassDB::register_class<GDAIPlugin>();
     // IMPORTANT: Only editor classes should be registered here
     // This plugin should NOT be active in exported games
+    ClassDB::register_class<GodotAI>();
     
     // For now, just log that we've initialized
     UtilityFunctions::print("GDAI: Module initialized (minimal stub)");

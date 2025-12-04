@@ -14,8 +14,7 @@ import sys
 import os
 import argparse
 import json
-from typing import Dict, Any, Optional
-from pathlib import Path
+from typing import Dict, Any
 
 
 def is_non_interactive() -> bool:

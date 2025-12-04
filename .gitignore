@@ -102,3 +102,4 @@ compile_commands.json
 .claude/logs_51388993704/Build windows (x86_64)/20_Post Checkout repository.txt
 .claude/logs_51388993704/Build windows (x86_64)/21_Complete job.txt
 .claude/logs_51388993704/Build windows (x86_64)/system.txt
+plugin/gdai.gdextension

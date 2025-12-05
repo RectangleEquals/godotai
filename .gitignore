@@ -103,3 +103,16 @@ compile_commands.json
 .claude/logs_51388993704/Build windows (x86_64)/21_Complete job.txt
 .claude/logs_51388993704/Build windows (x86_64)/system.txt
 plugin/gdai.gdextension
+godotai_test/.editorconfig
+godotai_test/.gitattributes
+godotai_test/.gitignore
+godotai_test/godotai-dev-977141a.zip
+godotai_test/icon.svg
+godotai_test/project.godot
+godotai_test/addons/gdai/gdai.gdextension
+godotai_test/addons/gdai/gdai.gdextension.uid
+godotai_test/addons/gdai/LICENSE
+godotai_test/addons/gdai/plugin.cfg
+godotai_test/addons/gdai/plugin.gd
+godotai_test/addons/gdai/plugin.gd.uid
+godotai_test/addons/gdai/README.md

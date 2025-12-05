@@ -72,47 +72,6 @@ config.log
 
 # Generated files
 compile_commands.json
-.claude/logs_51388993704/1_Build linux (x86_64).txt
-.claude/logs_51388993704/2_Build windows (x86_64).txt
-.claude/logs_51388993704/3_Build macos (universal).txt
-.claude/logs_51388993704/Build linux (x86_64)/1_Set up job.txt
-.claude/logs_51388993704/Build linux (x86_64)/2_Checkout repository.txt
-.claude/logs_51388993704/Build linux (x86_64)/3_Set up Python.txt
-.claude/logs_51388993704/Build linux (x86_64)/4_Install CMake.txt
-.claude/logs_51388993704/Build linux (x86_64)/6_Install dependencies (Linux).txt
-.claude/logs_51388993704/Build linux (x86_64)/8_Build GodotAI.txt
-.claude/logs_51388993704/Build linux (x86_64)/20_Post Checkout repository.txt
-.claude/logs_51388993704/Build linux (x86_64)/21_Complete job.txt
-.claude/logs_51388993704/Build linux (x86_64)/system.txt
-.claude/logs_51388993704/Build macos (universal)/1_Set up job.txt
-.claude/logs_51388993704/Build macos (universal)/2_Checkout repository.txt
-.claude/logs_51388993704/Build macos (universal)/3_Set up Python.txt
-.claude/logs_51388993704/Build macos (universal)/4_Install CMake.txt
-.claude/logs_51388993704/Build macos (universal)/7_Install dependencies (macOS).txt
-.claude/logs_51388993704/Build macos (universal)/8_Build GodotAI.txt
-.claude/logs_51388993704/Build macos (universal)/20_Post Checkout repository.txt
-.claude/logs_51388993704/Build macos (universal)/21_Complete job.txt
-.claude/logs_51388993704/Build macos (universal)/system.txt
-.claude/logs_51388993704/Build windows (x86_64)/1_Set up job.txt
-.claude/logs_51388993704/Build windows (x86_64)/2_Checkout repository.txt
-.claude/logs_51388993704/Build windows (x86_64)/3_Set up Python.txt
-.claude/logs_51388993704/Build windows (x86_64)/4_Install CMake.txt
-.claude/logs_51388993704/Build windows (x86_64)/5_Set up MSVC (Windows).txt
-.claude/logs_51388993704/Build windows (x86_64)/8_Build GodotAI.txt
-.claude/logs_51388993704/Build windows (x86_64)/20_Post Checkout repository.txt
-.claude/logs_51388993704/Build windows (x86_64)/21_Complete job.txt
-.claude/logs_51388993704/Build windows (x86_64)/system.txt
+.claude/
 plugin/gdai.gdextension
-godotai_test/.editorconfig
-godotai_test/.gitattributes
-godotai_test/.gitignore
-godotai_test/godotai-dev-977141a.zip
-godotai_test/icon.svg
-godotai_test/project.godot
-godotai_test/addons/gdai/gdai.gdextension
-godotai_test/addons/gdai/gdai.gdextension.uid
-godotai_test/addons/gdai/LICENSE
-godotai_test/addons/gdai/plugin.cfg
-godotai_test/addons/gdai/plugin.gd
-godotai_test/addons/gdai/plugin.gd.uid
-godotai_test/addons/gdai/README.md
+godotai_test/

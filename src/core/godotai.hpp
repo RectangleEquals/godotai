@@ -16,6 +16,7 @@ class GodotAI : public EditorPlugin {
 
 private:
     // Will add: HTTPServer, ProjectState, etc. in later phases
+    static GodotAI* singleton_instance;
     bool server_running = false;
     int server_port = 8765;
 
@@ -30,6 +31,8 @@ public:
     void _enter_tree() override;
     void _exit_tree() override;
     
+    static GodotAI* get_singleton();
+
     // Server control (stub for now)
     void start_server(int port = 8765);
     void stop_server();

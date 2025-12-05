@@ -44,7 +44,7 @@ void GodotAI::start_server(int port) {
     server_port = port;
     server_running = true;
     
-    // TODO: Actually start HTTP server in Phase 4
+    // TODO: Actually start HTTP server in Phase 5
     UtilityFunctions::print("GodotAI: Server started (stub) on port ", port);
 }
 

@@ -23,6 +23,15 @@ void initialize_gdai_module(ModuleInitializationLevel p_level) {
     // This plugin should NOT be active in exported games
     ClassDB::register_class<GodotAI>();
     
+    // Register editor singleton
+    if(Engine::get_singleton()->is_editor_hint()) {
+        GodotAI* singleton_instance = GodotAI::get_singleton();
+        if (singleton_instance == nullptr)
+            singleton_instance = memnew(GodotAI);
+        Engine::get_singleton()->register_singleton("GodotAI", singleton_instance);
+        UtilityFunctions::print("GDAI: Registered GodotAI singleton");
+    }
+    
     // For now, just log that we've initialized
     UtilityFunctions::print("GDAI: Module initialized (minimal stub)");
 }
@@ -30,6 +39,14 @@ void initialize_gdai_module(ModuleInitializationLevel p_level) {
 void uninitialize_gdai_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_EDITOR) {
         return;
+    }
+
+    // Free editor singleton
+    if(Engine::get_singleton()->is_editor_hint() && Engine::get_singleton()->has_singleton("GodotAI")) {
+        Object* singleton_instance = Engine::get_singleton()->get_singleton("GodotAI");
+        Engine::get_singleton()->unregister_singleton("GodotAI");
+        if (singleton_instance != nullptr)
+            memdelete(singleton_instance);
     }
 
     // TODO: Cleanup if needed

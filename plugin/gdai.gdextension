@@ -4,8 +4,14 @@ compatibility_minimum = "4.4"
 reloadable = true
 
 [libraries]
-# This file is auto-generated during build
-# Run: python setup.py -> build
-# The build system will scan plugin/bin/ and generate entries for found libraries
-#
-# DO NOT EDIT MANUALLY - Your changes will be overwritten
+# Windows
+windows.release.editor.x86_64 = "res://addons/gdai/bin/windows/libgdai.windows.editor.x86_64.dll"
+windows.editor.x86_64 = "res://addons/gdai/bin/windows/libgdai.windows.editor.x86_64.dll"
+
+# Linux
+linux.release.editor.x86_64 = "res://addons/gdai/bin/linux/libgdai.linux.editor.x86_64.so"
+linux.editor.x86_64 = "res://addons/gdai/bin/linux/libgdai.linux.editor.x86_64.so"
+
+# MacOS
+macos.release.editor.arm64 = "res://addons/gdai/bin/macos/libgdai.macos.editor.universal.dylib"
+macos.editor.arm64 = "res://addons/gdai/bin/macos/libgdai.macos.editor.universal.dylib"

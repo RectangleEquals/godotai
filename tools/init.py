@@ -5,7 +5,7 @@ Sets up the project by:
 - Initializing git submodules
 - Checking out correct godot-cpp branch
 - Generating build configuration
-- Creating compile_commands.json for IDE integration
+- Optionally initializing VS Code workspace
 """
 
 import subprocess
@@ -68,6 +68,13 @@ class InitTool(BaseTool):
                 required=False,
                 default=4
             ),
+            ToolArgument(
+                name="init_vscode",
+                description="Initialize VS Code workspace after setup",
+                type=bool,
+                required=False,
+                default=True
+            ),
         ]
     
     def execute(self, args: Dict[str, Any]) -> int:
@@ -104,15 +111,20 @@ class InitTool(BaseTool):
         print(f"  Architecture: {args['architecture']}")
         print(f"  Parallel Jobs: {args['jobs']}")
         
-        # Step 4: Generate compile_commands.json placeholder
-        # (Will be generated properly after first build)
-        self.print_info("IDE integration will be set up after first build")
+        # Step 4: Initialize VS Code workspace (if requested)
+        if args.get("init_vscode", True):
+            print("\n" + "=" * 70)
+            result = self.execute_tool("init-vscode", {})
+            if result != 0:
+                self.print_warning("VS Code initialization had warnings")
+                print("You can run 'init-vscode' manually later if needed")
         
         print("\n" + "=" * 70)
         self.print_success("Initialization complete!")
         print("\nNext steps:")
         print("  1. Run 'python setup.py' and choose 'build' to compile")
-        print("  2. Run 'python setup.py' and choose 'install' to add to a Godot project")
+        print("  2. If using VS Code, reload the window for IntelliSense")
+        print("  3. Run 'python setup.py' and choose 'install' to add to a Godot project")
         print("=" * 70)
         
         return 0

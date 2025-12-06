@@ -4,8 +4,11 @@
 
 using namespace godot;
 
+GodotAI *GodotAI::singleton_instance = nullptr;
+
 void GodotAI::_bind_methods() {
     // Bind methods for GDScript access
+    ClassDB::bind_static_method("GodotAI", D_METHOD("get"), &GodotAI::get_singleton);
     ClassDB::bind_method(D_METHOD("start_server", "port"), &GodotAI::start_server, DEFVAL(8765));
     ClassDB::bind_method(D_METHOD("stop_server"), &GodotAI::stop_server);
     ClassDB::bind_method(D_METHOD("is_server_running"), &GodotAI::is_server_running);
@@ -33,6 +36,14 @@ void GodotAI::_exit_tree() {
     // Called when the plugin is deactivated
     stop_server();
     UtilityFunctions::print("GodotAI: Plugin deactivated");
+}
+
+GodotAI *godot::GodotAI::get_singleton()
+{
+    if (singleton_instance == nullptr)
+        singleton_instance = memnew(GodotAI);
+    
+    return singleton_instance;
 }
 
 void GodotAI::start_server(int port) {

@@ -45,7 +45,7 @@ option(GODOTAI_DEV_BUILD
 # ============================================================================
 
 # Generate compile_commands.json for clangd and other tools
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 
 # ============================================================================
 # Platform Detection

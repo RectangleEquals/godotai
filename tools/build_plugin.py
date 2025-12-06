@@ -227,6 +227,7 @@ class BuildPluginTool(BaseTool):
             "cmake",
             "-S", str(root_dir),
             "-B", str(build_dir),
+            f"-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
             f"-DGODOTAI_BUILD_TYPE={target}",
             f"-DGODOTAI_PRECISION={precision}",
         ]

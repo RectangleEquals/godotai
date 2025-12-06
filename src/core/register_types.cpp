@@ -25,10 +25,7 @@ void initialize_gdai_module(ModuleInitializationLevel p_level) {
     
     // Register editor singleton
     if(Engine::get_singleton()->is_editor_hint()) {
-        GodotAI* singleton_instance = GodotAI::get_singleton();
-        if (singleton_instance == nullptr)
-            singleton_instance = memnew(GodotAI);
-        Engine::get_singleton()->register_singleton("GodotAI", singleton_instance);
+        Engine::get_singleton()->register_singleton("GodotAI", GodotAI::get_singleton());
         UtilityFunctions::print("GDAI: Registered GodotAI singleton");
     }
     

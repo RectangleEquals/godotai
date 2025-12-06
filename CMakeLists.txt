@@ -41,6 +41,13 @@ option(GODOTAI_DEV_BUILD
     "Enable developer build with extra debugging" OFF)
 
 # ============================================================================
+# IDE Integration
+# ============================================================================
+
+# Generate compile_commands.json for clangd and other tools
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# ============================================================================
 # Platform Detection
 # ============================================================================
 

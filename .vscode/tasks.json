@@ -1,0 +1,162 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "GodotAI: Build",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "setup.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": {
+        "owner": "cpp",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "detail": "Build the GodotAI extension using our custom build system (Ctrl+Shift+B)"
+    },
+    {
+      "label": "GodotAI: Clean",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "setup.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "detail": "Clean build artifacts"
+    },
+    {
+      "label": "GodotAI: Rebuild",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "GodotAI: Clean",
+        "GodotAI: Build"
+      ],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "detail": "Clean and rebuild the extension"
+    },
+    {
+      "label": "GodotAI: Initialize",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "setup.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "detail": "Initialize project (submodules and dependencies)"
+    },
+    {
+      "label": "GodotAI: Initialize VS Code",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "setup.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "detail": "Generate/update VS Code configuration files for IntelliSense"
+    },
+    {
+      "label": "GodotAI: Build libgit2",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "setup.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "detail": "Build the libgit2 dependency"
+    },
+    {
+      "label": "GodotAI: Build libhv",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "setup.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "detail": "Build the libhv dependency"
+    }
+  ]
+}

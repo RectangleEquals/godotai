@@ -1,0 +1,44 @@
+{
+  "recommendations": [
+    // Primary IntelliSense engine - provides superior code analysis
+    "llvm-vs-code-extensions.vscode-clangd",
+    
+    // Python support for our build system
+    "ms-python.python",
+    
+    // Enhanced C++ syntax highlighting
+    "jeff-hykin.better-cpp-syntax",
+    
+    // Automatic include guards
+    "akiramiyakoda.cppincludeguard",
+    
+    // Inline error/warning display
+    "usernamehw.errorlens",
+    
+    // Enhanced Git integration
+    "eamodio.gitlens",
+    
+    // TODO comment aggregation
+    "gruntfuggly.todo-tree",
+    
+    // Trailing whitespace management
+    "shardulm94.trailing-spaces",
+    
+    // Doxygen documentation generator
+    "cschlosser.doxydocgen",
+    
+    // Code formatting with clang-format
+    "xaver.clang-format",
+    
+    // CMake language support (optional - for viewing/editing CMakeLists.txt)
+    "josetr.cmake-language-support-vscode"
+  ],
+  "unwantedRecommendations": [
+    // Disable Microsoft C/C++ extension to avoid conflicts with clangd
+    "ms-vscode.cpptools",
+    "ms-vscode.cpptools-extension-pack",
+    
+    // We use our custom Python build system, not CMake Tools
+    "ms-vscode.cmake-tools"
+  ]
+}
